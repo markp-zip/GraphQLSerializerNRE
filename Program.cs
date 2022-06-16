@@ -37,7 +37,7 @@ public class Program
     {
         try
         {
-            // The issue occurs in this constructor, which modifies the above GraphQlJsonSettings
+            // The issue is caused by this constructor, which modifies the above GraphQlJsonSettings
             // in a non-thread-safe way, corrupting the state
             var serializer = new NewtonsoftJsonSerializer(GraphQlJsonSettings);
             var client = new GraphQLHttpClient("https://invalid.whatever.com", serializer);

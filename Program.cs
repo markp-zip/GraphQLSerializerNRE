@@ -8,23 +8,22 @@ namespace GraphQLSerializerNRE;
 
 public class Program
 {
-    public const int MaxDegreeOfParallelism = 10;
-
     static void Main()
     {
-        Console.WriteLine("Starting");
-
         var options = new ParallelOptions
         {
-            MaxDegreeOfParallelism = MaxDegreeOfParallelism
+            MaxDegreeOfParallelism = 10
         };
+
+        // Simulate some simultaneous requests/commands
         Parallel.For(0, 100, options, async i =>
         {
-            await Step(i);
+            await SimulatedRequest(i);
             Thread.Sleep(100);
         });
     }
 
+    // Same setup as gateway
     public static JsonSerializerSettings GraphQlJsonSettings { get; } = new JsonSerializerSettings
     {
         NullValueHandling = NullValueHandling.Ignore,
@@ -34,12 +33,14 @@ public class Program
         },
     };
 
-    public static async Task Step(int i)
+    public static async Task SimulatedRequest(int i)
     {
         try
         {
+            // The issue occurs in this constructor, which modifies the above GraphQlJsonSettings
+            // in a non-thread-safe way, corrupting the state
             var serializer = new NewtonsoftJsonSerializer(GraphQlJsonSettings);
-            var client = new GraphQLHttpClient("https://invalid.zip.co", serializer);
+            var client = new GraphQLHttpClient("https://invalid.whatever.com", serializer);
             var request = new GraphQLRequest
             {
                 Query = "Doesnt matter",
@@ -47,11 +48,14 @@ public class Program
                 Variables = new { id = "123", },
             };
 
+            // The DD traces for the NREs stopped before the GraphQL.HttpClient made the request to 
+            // shopify's api, therefore the issue must have occured during the in the request processing
+            // rather than the response processing.
             await client.SendQueryAsync<object>(request);
         }
-        catch (NullReferenceException)
+        catch (NullReferenceException ex)
         {
-            Console.WriteLine($"NRE occurred on step {i}");
+            Console.WriteLine($"NRE occurred on step {i}: {ex}");
         }
         catch (Exception ex)
         {

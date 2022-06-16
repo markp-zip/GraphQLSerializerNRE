@@ -51,6 +51,8 @@ public class Program
             // The DD traces for the NREs stopped before the GraphQL.HttpClient made the request to 
             // shopify's api, therefore the issue must have occured during the in the request processing
             // rather than the response processing.
+            // When the client attepmts to use the serializer which has the corrupted settings, it will
+            // sometimes throw an NRE (check the console logs)
             await client.SendQueryAsync<object>(request);
         }
         catch (NullReferenceException ex)
